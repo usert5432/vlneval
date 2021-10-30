@@ -1,0 +1,23 @@
+parent vlneval
+defaultqual    e20
+
+# No FCL files
+fcldir -
+
+# Dependencies
+product         version
+eigen           v3_3_9a
+tensorflow      v2_3_1a
+cetbuildtools   v8_18_05    -    only_for_build
+end_product_list
+
+# Qualifiers
+qualifier     eigen          tensorflow
+e20:debug     -nq-           e20:p392
+e20:prof      -nq-           e20:p392
+e19:debug     -nq-           e19:p392
+e19:prof      -nq-           e19:p392
+c7:debug      -nq-           c7:p392
+c7:prof       -nq-           c7:p392
+end_qualifier_list
+
