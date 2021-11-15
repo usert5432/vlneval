@@ -1,0 +1,35 @@
+# The parent line must be the first non-comment line in the file
+# This line defines the product name and version
+parent vlneval
+defaultqual    e20
+
+incdir product_dir include
+fcldir -
+libdir fq_dir      lib
+bindir fq_dir      bin
+
+# if define_pythonpath is enabled, the PYTHONPATH variable will be set
+#define_pythonpath
+
+# List all products here.
+product         version		qual	<format=2>
+eigen           v3_3_9a
+tensorflow      v2_3_1a
+boost           v1_75_0
+cetbuildtools   v8_18_05    -    only_for_build
+end_product_list
+ 
+qualifier     eigen  tensorflow  boost
+e20:debug     -nq-   e20:p392    e20:debug
+e20:prof      -nq-   e20:p392    e20:prof
+c7:debug      -nq-   c7:p392     c7:debug
+c7:prof       -nq-   c7:p392     c7:prof
+end_qualifier_list
+
+# Preserve tabs and formatting in emacs and vi / vim:
+
+### Local Variables:
+### tab-width: 8
+### End:
+
+# vi:set ts=8 noexpandtab:
