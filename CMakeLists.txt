@@ -16,20 +16,37 @@ if(DEFINED ENV{CETBUILDTOOLS_VERSION})
 
     cet_set_compiler_flags(DIAGS CAUTIOUS
       WERROR NO_UNDEFINED
-      EXTRA_FLAGS -pedantic
       )
 
     cet_report_compiler_flags()
 
     find_ups_product( eigen )
+    find_ups_product( protobuf )
     find_ups_product( tensorflow )
     find_package(Boost REQUIRED)
 
+    include_directories($ENV{EIGEN_INC})
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
     # ADD SOURCE CODE SUBDIRECTORIES HERE
     add_subdirectory(src)
+    add_subdirectory(include)
 
     # ups - table and config files
     add_subdirectory(ups)
+
+    # Generating pkg-config
+    set(PKG_CONFIG_LIBS "-lvlneval")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
+        @ONLY
+    )
+    install(
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
+        DESTINATION pkgconfig/
+    )
 
     # packaging utility
     include(UseCPack)
