@@ -1,13 +1,14 @@
 # use cmake 3.12 or later
 cmake_minimum_required (VERSION 3.12)
 
+set(PROJ_VERSION 0.0.1)
 
 # if the CETMODULES_VERSION environmental variable is defined, use cetmodules
 if(DEFINED ENV{CETMODULES_VERSION})
 
     # when using cetmodules, find_package(cetmodules..) must come before project(...)
     find_package(cetmodules 2.29.06 REQUIRED)
-    project(vlneval VERSION 0.0.1 LANGUAGES CXX)
+    project(vlneval VERSION ${PROJ_VERSION} LANGUAGES CXX)
 
     include(CetCMakeEnv)
     cet_cmake_env()
@@ -45,7 +46,7 @@ if(DEFINED ENV{CETMODULES_VERSION})
     cet_cmake_config()
 else()
 # build without cetbuildtools
-project(vlneval VERSION 0.0.1 LANGUAGES CXX)
+project(vlneval VERSION ${PROJ_VERSION} LANGUAGES CXX)
 option(USE_UPS "Build on FNAL/UPS system" ON)
 
 add_compile_options(-Wall -Werror)
