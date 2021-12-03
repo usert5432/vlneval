@@ -244,7 +244,7 @@ product		version		qual	flags		<table_format=2>
 eigen           v3_3_9a
 tensorflow      v2_3_1a
 boost           v1_75_0
-cetmodules	v2_29_09 	-	only_for_build
+cetmodules	v2_29_06 	-	only_for_build
 end_product_list
 ####################################
 
