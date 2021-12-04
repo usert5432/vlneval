@@ -1,16 +1,15 @@
 # use cmake 3.12 or later
 cmake_minimum_required (VERSION 3.12)
 
+# if the CETMODULES_VERSION environmental variable is defined, use cetmodules
+if(DEFINED ENV{CETMODULES_VERSION})
+    # when using cetmodules, find_package(cetmodules..) must come before project(...)
+    find_package(cetmodules 2.29.06 REQUIRED)
+endif ()
+
 project(vlneval VERSION 0.0.1 LANGUAGES CXX)
 
-# if the CETBUILDTOOLS_VERSION environmental variable is defined, use cetbuildtools
-if(DEFINED ENV{CETBUILDTOOLS_VERSION})
-# using cetbuildtools to create a ups product
-
-    # cetbuildtools contains our cmake modules
-    # Note that find package will add cetbuildtools Modules to CMAKE_MODULE_PATH
-    find_package(cetbuildtools REQUIRED)
-
+if(DEFINED ENV{CETMODULES_VERSION})
     include(CetCMakeEnv)
     cet_cmake_env()
 
@@ -20,21 +19,17 @@ if(DEFINED ENV{CETBUILDTOOLS_VERSION})
 
     cet_report_compiler_flags()
 
-    find_ups_product( eigen )
-    find_ups_product( protobuf )
-    find_ups_product( tensorflow )
+    find_package(Protobuf REQUIRED)
+    find_package (Eigen3 3.3 REQUIRED NO_MODULE)
     find_package(Boost REQUIRED)
 
-    include_directories($ENV{EIGEN_INC})
+    # this package uses a different directory structure than the cet default
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
     # ADD SOURCE CODE SUBDIRECTORIES HERE
     add_subdirectory(src)
     add_subdirectory(include)
-
-    # ups - table and config files
-    add_subdirectory(ups)
 
     # Generating pkg-config
     set(PKG_CONFIG_LIBS "-lvlneval")
@@ -48,10 +43,9 @@ if(DEFINED ENV{CETBUILDTOOLS_VERSION})
         DESTINATION pkgconfig/
     )
 
-    # packaging utility
-    include(UseCPack)
+    cet_cmake_config()
 else()
-# build without cetbuildtools
+# build without cetmodules
 option(USE_UPS "Build on FNAL/UPS system" ON)
 
 add_compile_options(-Wall -Werror)
