@@ -1,4 +1,14 @@
-# this cmake file is only used when building with cetbuildtools
+# Copyright (c) Lynn Garren <garren@fnal.gov>
+
+cet_set_compiler_flags(DIAGS CAUTIOUS WERROR NO_UNDEFINED)
+cet_report_compiler_flags()
+
+find_package(Protobuf REQUIRED)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Boost REQUIRED)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # make sure we can find the eigen and protobuf headers
 include_directories(${EIGEN3_INCLUDE_DIRS})
@@ -21,13 +31,14 @@ if (_cpv_deprecations_disabled)
 endif()
 
 cet_make_library( LIBRARY_NAME vlneval
-                  SOURCE tf_model/ModelConfig.cxx
-                         tf_model/TFModel.cxx
-                         zoo/VLNEnergyModel.cxx
+                  SOURCE ${SOURCES}
                    LIBRARIES PRIVATE
                              TENSORFLOW
                              FOR_TENSORFLOW
                 )
 
-install_source(SUBDIRNAME tf_model
-               SUBDIRNAME zoo)
+install_source(LIST ${SOURCES})
+install(DIRECTORY "include/" DESTINATION include)
+
+cet_cmake_config()
+

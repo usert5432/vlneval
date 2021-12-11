@@ -1,71 +1,58 @@
-# use cmake 3.12 or later
 cmake_minimum_required (VERSION 3.12)
 
-# if the CETMODULES_VERSION environmental variable is defined, use cetmodules
-if(DEFINED ENV{CETMODULES_VERSION})
-    # when using cetmodules, find_package(cetmodules..) must come before project(...)
+option(USE_UPS "Build on FNAL/UPS system" ON)
+option(USE_CETMODULES "Use cetmodules to build the package" ON)
+
+# NOTE: Due to cetmodules architecture, this needs to be done early
+if ((DEFINED ENV{CETMODULES_VERSION}) AND USE_CETMODULES)
     find_package(cetmodules 2.29.06 REQUIRED)
 endif ()
 
 project(vlneval VERSION 0.0.1 LANGUAGES CXX)
+set(
+    SOURCES
+        src/tf_model/ModelConfig.cxx
+        src/tf_model/TFModel.cxx
+        src/zoo/VLNEnergyModel.cxx
+)
 
-if(DEFINED ENV{CETMODULES_VERSION})
-    include(CetCMakeEnv)
-    cet_cmake_env()
 
-    cet_set_compiler_flags(DIAGS CAUTIOUS
-      WERROR NO_UNDEFINED
-      )
-
-    cet_report_compiler_flags()
-
-    find_package(Protobuf REQUIRED)
-    find_package (Eigen3 3.3 REQUIRED NO_MODULE)
-    find_package(Boost REQUIRED)
-
-    # this package uses a different directory structure than the cet default
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-    # ADD SOURCE CODE SUBDIRECTORIES HERE
-    add_subdirectory(src)
-    add_subdirectory(include)
-
-    # Generating pkg-config
+function (generate_pkgconfig install_dir)
     set(PKG_CONFIG_LIBS "-lvlneval")
+
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.in"
         "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
         @ONLY
     )
+
     install(
         FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
-        DESTINATION pkgconfig/
+        DESTINATION "${install_dir}/pkgconfig/"
     )
+endfunction ()
 
-    cet_cmake_config()
-else()
-# build without cetmodules
-option(USE_UPS "Build on FNAL/UPS system" ON)
+macro (cetmodules_build)
+    include(CetCMakeEnv)
+    cet_cmake_env()
 
-add_compile_options(-Wall -Werror)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cetmodules_build.cmake)
 
-include(GNUInstallDirs)
-find_package(Boost REQUIRED)
+    set(PKG_CONFIG_INSTALL_PREFIX "\${pcfiledir}/../..")
+    generate_pkgconfig(".")
+endmacro ()
 
-if (NOT USE_UPS)
+macro (configure_standalone_build)
     find_package(PkgConfig)
 
     pkg_check_modules(EIGEN eigen3 REQUIRED)
     pkg_check_modules(PROTOBUF protobuf REQUIRED)
     pkg_check_modules(TENSORFLOW tensorflow REQUIRED)
 
-    set(PKG_CONFIG_INSTALL_PREFIX CMAKE_INSTALL_PREFIX)
+    set(PKG_CONFIG_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+endmacro ()
 
-else ()
+macro (configure_ups_build)
     message(STATUS "Building using UPS. Godspeed.")
 
     if (NOT DEFINED ENV{TENSORFLOW_LIB})
@@ -93,50 +80,59 @@ else ()
 
     set(TENSORFLOW_LINK_LIBRARIES tensorflow)
     set(PKG_CONFIG_INSTALL_PREFIX "\${pcfiledir}/../..")
+endmacro ()
+
+macro (configure_generic_build)
+    include(GNUInstallDirs)
+    find_package(Boost REQUIRED)
+
+    if (USE_UPS)
+        configure_ups_build ()
+    else ()
+        configure_standalone_build()
+    endif ()
+
+endmacro ()
+
+macro (generic_build)
+    add_compile_options(-Wall -Werror -Wno-pedantic -Wno-sign-compare)
+
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+
+    configure_generic_build()
+
+    add_library(vlneval SHARED ${SOURCES})
+
+    target_link_directories(vlneval PRIVATE ${TENSORFLOW_LIBRARY_DIRS})
+    target_link_libraries  (vlneval PRIVATE ${TENSORFLOW_LINK_LIBRARIES})
+
+    target_include_directories(
+        vlneval
+            PRIVATE ${EIGEN_INCLUDE_DIRS}
+            PRIVATE ${TENSORFLOW_INCLUDE_DIRS}
+            PRIVATE ${PROTOBUF_INCLUDE_DIRS}
+            PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+
+    install(
+        TARGETS vlneval
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    )
+
+    install(DIRECTORY "include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+    generate_pkgconfig("${CMAKE_INSTALL_LIBDIR}")
+endmacro ()
+
+
+if ((DEFINED ENV{CETMODULES_VERSION}) AND USE_CETMODULES)
+    cetmodules_build()
+else ()
+    generic_build()
 endif ()
-
-set(SOURCES
-    src/tf_model/ModelConfig.cxx
-    src/tf_model/TFModel.cxx
-    src/zoo/VLNEnergyModel.cxx
-)
-
-add_library(vlneval SHARED ${SOURCES})
-
-target_link_directories(vlneval PRIVATE ${TENSORFLOW_LIBRARY_DIRS})
-target_link_libraries  (vlneval PRIVATE ${TENSORFLOW_LINK_LIBRARIES})
-
-target_include_directories(
-    vlneval
-        PRIVATE ${EIGEN_INCLUDE_DIRS}
-        PRIVATE ${TENSORFLOW_INCLUDE_DIRS}
-        PRIVATE ${PROTOBUF_INCLUDE_DIRS}
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-install(
-    TARGETS vlneval
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-install(DIRECTORY "include/" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-# Generating pkg-config
-set(PKG_CONFIG_LIBS "-lvlneval")
-
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
-    @ONLY
-)
-
-install(
-    FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig/
-)
-endif()
 
