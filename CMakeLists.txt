@@ -8,7 +8,15 @@ if ((DEFINED ENV{CETMODULES_VERSION}) AND USE_CETMODULES)
     find_package(cetmodules 2.29.06 REQUIRED)
 endif ()
 
-project(vlneval VERSION 0.0.1 LANGUAGES CXX)
+project(
+    vlneval
+    DESCRIPTION
+        "A standalone library to evaluate TensorFlow graphs that operate \
+on Variable Length Arrays."
+    LANGUAGES CXX
+    VERSION 0.0.1
+)
+
 set(
     SOURCES
         src/tf_model/ModelConfig.cxx
